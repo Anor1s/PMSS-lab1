@@ -3,6 +3,8 @@ package com.example.cargotiltmonitor.monitor
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.cargotiltmonitor.helpers.BleHub
+import com.example.cargotiltmonitor.helpers.BleProfile
 import com.example.cargotiltmonitor.helpers.SensorReader
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -74,6 +76,9 @@ class MonitorViewModel(app: Application) : AndroidViewModel(app) {
         if (status == MonitorStatus.DANGER && previous != MonitorStatus.DANGER) {
             viewModelScope.launch {
                 _events.send(MonitorEvent.ShowMessage("Небезпека! Нахил понад ${DANGER_ANGLE.toInt()}°"))
+            }
+            viewModelScope.launch {
+                BleHub.connector.sendData(BleProfile.CMD_ALARM_ON)
             }
         }
     }
