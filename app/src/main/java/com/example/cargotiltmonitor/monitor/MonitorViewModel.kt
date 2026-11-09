@@ -8,6 +8,9 @@ import com.example.cargotiltmonitor.actuators.ActuatorConfig
 import com.example.cargotiltmonitor.actuators.Decision
 import com.example.cargotiltmonitor.actuators.DecisionEngine
 import com.example.cargotiltmonitor.actuators.SmartActuator
+import com.example.cargotiltmonitor.data.HistoryConfig
+import com.example.cargotiltmonitor.data.HistoryRepositories
+import com.example.cargotiltmonitor.data.SensorRecord
 import com.example.cargotiltmonitor.helpers.BleHub
 import com.example.cargotiltmonitor.helpers.BleProfile
 import com.example.cargotiltmonitor.helpers.NetworkChecker
@@ -43,6 +46,7 @@ class MonitorViewModel(app: Application) : AndroidViewModel(app) {
     private val sensorReader = SensorReader(app)
     private val network = NetworkChecker(app)
     private val repository = AppRepositories.sensors
+    private val history = HistoryRepositories.get(app)
     private val actuator = SmartActuator(app)
     private val engine = DecisionEngine()
 
@@ -57,6 +61,8 @@ class MonitorViewModel(app: Application) : AndroidViewModel(app) {
     private var pollJob: Job? = null
     private var lastSentAt = 0L
     private var lastSentTilt = 0f
+    private var lastRecordAt = 0L
+    private var lastRecordTilt = 0f
     private var autoActive = false
     private var lastRemote = RemoteCommand()
     private val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.US)
@@ -117,7 +123,22 @@ class MonitorViewModel(app: Application) : AndroidViewModel(app) {
             Decision.KEEP -> Unit
         }
 
+        maybeRecord(tilt)
         maybeUpload(x, y, z, tilt)
+    }
+
+    // Запис в локальну БД (ЛР №5): раз на секунду або при зміні кута на WRITE_DELTA_DEG
+    private fun maybeRecord(tilt: Float) {
+        val now = SystemClock.elapsedRealtime()
+        val elapsed = now - lastRecordAt
+        val changed = abs(tilt - lastRecordTilt) >= HistoryConfig.WRITE_DELTA_DEG
+        val due = elapsed >= HistoryConfig.WRITE_INTERVAL_MS || (changed && elapsed >= HistoryConfig.WRITE_MIN_GAP_MS)
+        if (!due) return
+
+        lastRecordAt = now
+        lastRecordTilt = tilt
+        val record = SensorRecord(timestamp = System.currentTimeMillis(), sensorValue = tilt, actionTriggered = autoActive)
+        viewModelScope.launch { history.add(record) }
     }
 
     private fun setAll(on: Boolean) {
@@ -191,7 +212,7 @@ class MonitorViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    // Повідомлення лише при зміні статусу, щоб не засмічувати екран кожні 20 с
+    // Повідомлення лише при зміні статусу, щоб не засмічувати екран
     private fun markUnsent(status: SyncStatus, text: String) {
         val previous = _state.value.syncStatus
         _state.update { it.copy(syncStatus = status, pendingCount = it.pendingCount + 1) }

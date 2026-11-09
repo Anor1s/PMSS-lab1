@@ -17,6 +17,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.example.cargotiltmonitor.analytics.AnalyticsScreen
+import com.example.cargotiltmonitor.analytics.AnalyticsViewModel
 import com.example.cargotiltmonitor.ble.BleScreen
 import com.example.cargotiltmonitor.ble.BleViewModel
 import com.example.cargotiltmonitor.monitor.MonitorAction
@@ -26,10 +28,11 @@ import com.example.cargotiltmonitor.monitor.MonitorViewModel
 class MainActivity : ComponentActivity() {
     private val vm: MonitorViewModel by viewModels()
     private val bleVm: BleViewModel by viewModels()
+    private val analyticsVm: AnalyticsViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { MaterialTheme { AppRoot(vm, bleVm) } }
+        setContent { MaterialTheme { AppRoot(vm, bleVm, analyticsVm) } }
     }
 
     override fun onResume() {
@@ -44,18 +47,23 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun AppRoot(vm: MonitorViewModel, bleVm: BleViewModel) {
+private fun AppRoot(vm: MonitorViewModel, bleVm: BleViewModel, analyticsVm: AnalyticsViewModel) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
     Scaffold(
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(selected = tab == 0, onClick = { tab = 0 }, icon = { Text("📐") }, label = { Text("Датчик") })
                 NavigationBarItem(selected = tab == 1, onClick = { tab = 1 }, icon = { Text("📡") }, label = { Text("BLE") })
+                NavigationBarItem(selected = tab == 2, onClick = { tab = 2 }, icon = { Text("📈") }, label = { Text("Аналітика") })
             }
         }
     ) { inner ->
         Box(Modifier.padding(inner)) {
-            if (tab == 0) MonitorScreen(vm) else BleScreen(bleVm)
+            when (tab) {
+                0 -> MonitorScreen(vm)
+                1 -> BleScreen(bleVm)
+                else -> AnalyticsScreen(analyticsVm)
+            }
         }
     }
 }
