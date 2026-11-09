@@ -5,11 +5,11 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Url
 import java.util.concurrent.TimeUnit
 
-// JSON-модель для хмари
 data class SensorPayload(
     val deviceId: String,
     val sensorType: String,
@@ -20,9 +20,19 @@ data class SensorPayload(
     val timestamp: Long
 )
 
+// Команда з хмари: "on" / "off" для кожного пристрою
+data class RemoteCommand(
+    val lamp: String? = null,
+    val siren: String? = null,
+    val flashlight: String? = null
+)
+
 interface CloudApi {
     @POST
     suspend fun upload(@Url url: String, @Body payload: SensorPayload)
+
+    @GET
+    suspend fun fetchCommand(@Url url: String): RemoteCommand
 }
 
 object CloudClient {

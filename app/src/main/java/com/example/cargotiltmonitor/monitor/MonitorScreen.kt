@@ -13,7 +13,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -42,11 +45,12 @@ fun MonitorScreen(vm: MonitorViewModel) {
         }
     }
 
-    MonitorContent(state = state)
+    MonitorContent(state = state, onAction = vm::onAction)
 }
 
+// Чиста функція: State на вході, жодної логіки — лише малювання.
 @Composable
-fun MonitorContent(state: MonitorState) {
+fun MonitorContent(state: MonitorState, onAction: (MonitorAction) -> Unit) {
     val (statusText, color) = when (state.status) {
         MonitorStatus.NORMAL -> "НОРМА" to Color(0xFF2E7D32)
         MonitorStatus.WARNING -> "ПОПЕРЕДЖЕННЯ" to Color(0xFFF9A825)
@@ -60,18 +64,18 @@ fun MonitorContent(state: MonitorState) {
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Spacer(Modifier.height(16.dp))
         Text("Cargo Tilt Monitor", fontSize = 26.sp)
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(16.dp))
         Text("X: %.2f".format(state.x), fontSize = 20.sp)
         Text("Y: %.2f".format(state.y), fontSize = 20.sp)
         Text("Z: %.2f".format(state.z), fontSize = 20.sp)
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(12.dp))
         Text("Кут нахилу: %.1f°".format(state.tilt), fontSize = 22.sp)
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(12.dp))
 
         // Графічний індикатор (Canvas): шкала 0–60°
         Canvas(modifier = Modifier.fillMaxWidth().height(40.dp)) {
@@ -88,14 +92,47 @@ fun MonitorContent(state: MonitorState) {
             )
         }
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(16.dp))
         Text(statusText, fontSize = 32.sp, color = color)
 
         // Індикатор «Хмарна синхронізація»
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(16.dp))
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(Modifier.size(14.dp).background(syncColor, CircleShape))
             Text(syncText, fontSize = 16.sp)
         }
+
+        // Панель «Manual Control» + віртуальна лампа
+        Spacer(Modifier.height(24.dp))
+        Text("Manual Control", fontSize = 22.sp)
+        Spacer(Modifier.height(8.dp))
+        Box(
+            Modifier.size(56.dp).background(
+                if (state.lamp) Color(0xFFFFD600) else Color(0xFFBDBDBD), CircleShape
+            )
+        )
+        Text(if (state.lamp) "Лампа: УВІМК" else "Лампа: вимк", fontSize = 14.sp)
+        Spacer(Modifier.height(8.dp))
+        ActuatorRow("Лампа (реле)", state.lamp) { onAction(MonitorAction.SetActuator(ActuatorType.LAMP, it)) }
+        ActuatorRow("Сирена (вібрація)", state.siren) { onAction(MonitorAction.SetActuator(ActuatorType.SIREN, it)) }
+        ActuatorRow(
+            if (state.flashAvailable) "Ліхтарик" else "Ліхтарик (віртуальний)",
+            state.flashlight
+        ) { onAction(MonitorAction.SetActuator(ActuatorType.FLASHLIGHT, it)) }
+        Spacer(Modifier.height(8.dp))
+        Text("Команда хмари: ${state.lastCommand.ifEmpty { "—" }}", fontSize = 13.sp)
+        Spacer(Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun ActuatorRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, fontSize = 16.sp)
+        Switch(checked = checked, onCheckedChange = onChange)
     }
 }

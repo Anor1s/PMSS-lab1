@@ -5,11 +5,15 @@ object CloudConfig {
     const val URL = "https://webhook.site/3ed7ac9c-c9bd-4959-8982-74f78659695e"
     const val BASE_URL = "https://webhook.site/"
 
+    // Канал команд (Cloud-to-Device): JSON-документ, який редагується вручну
+    const val COMMAND_URL = "https://jsonblob.com/api/jsonBlob/01a1bead-fb68-7612-8ce2-a2337d1a7c64"
+    const val POLL_INTERVAL_MS = 3000L  // як часто опитувати хмару на нові команди (мс)
+
     const val DEVICE_ID = "cargo-tilt-01"
     const val SENSOR_TYPE = "accelerometer"
 
     const val SEND_INTERVAL_MS = 20000L // як часто слати дані (мс): раз на 20 с
     const val SEND_DELTA_DEG = 5f       // слати раніше, якщо кут змінився на 5° і більше
-    const val MIN_GAP_MS = 5000L        // мінімальна пауза між відправками (мс), навіть при різкому нахилі
-    const val TIMEOUT_S = 10L           // скільки секунд чекати відповідь сервера, потім помилка
+    const val MIN_GAP_MS = 5000L        // мінімальна пауза між відправками (мс)
+    const val TIMEOUT_S = 10L           // таймаут відповіді сервера, секунд
 }

@@ -12,6 +12,17 @@ class SensorRepository(private val api: CloudApi) {
             api.upload(CloudConfig.URL, reading.toPayload())
             Result.success(Unit)
         } catch (e: CancellationException) {
+            throw e // скасування корутини не "ковтаємо"
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // Опитування (polling) каналу команд
+    suspend fun fetchCommand(): Result<RemoteCommand> = withContext(Dispatchers.IO) {
+        try {
+            Result.success(api.fetchCommand(CloudConfig.COMMAND_URL))
+        } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             Result.failure(e)
@@ -19,6 +30,7 @@ class SensorRepository(private val api: CloudApi) {
     }
 }
 
+// Один репозиторій на весь додаток
 object AppRepositories {
     val sensors: SensorRepository by lazy { SensorRepository(CloudClient.api) }
 }
